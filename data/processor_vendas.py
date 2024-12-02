@@ -2,13 +2,17 @@
 from data.extractor import fetch_sales_data
 from services.data_processor import DataProcessor
 
+
 def processar_vendas(pasta_json, db_service):
     # Extraindo dados
     fetch_sales_data()
 
     # Processando dados
     processor = DataProcessor(pasta_json)
-    todas_vendas, todos_pagamentos, todos_itens, clientes = processor.processar_arquivos()
+    todas_vendas, todos_pagamentos, todos_itens, clientes = (
+        processor.processar_arquivos()
+    )
+
 
 """    # Persistindo dados
     for cliente in clientes.values():

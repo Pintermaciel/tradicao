@@ -11,6 +11,7 @@ from models.pagamento import Pagamento
 # Cria a pasta 'json' se não existir
 os.makedirs("data/json", exist_ok=True)
 
+
 # Função para gerar datas diárias dos últimos 5 anos em ordem decrescente
 def generate_daily_intervals(years=5):
     today = datetime.today()
@@ -19,17 +20,22 @@ def generate_daily_intervals(years=5):
 
     for _ in range(years * 365):  # Aproximadamente 5 anos de dias
         end_date = start_date
-        intervals.append((start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d")))
+        intervals.append(
+            (start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"))
+        )
         start_date -= timedelta(days=1)  # Retrocede um dia
 
     return intervals  # Retorna em ordem decrescente
+
 
 # Gera as datas e faz as requisições GET com tentativa em caso de erro
 def fetch_sales_data():
     token = "46723379751"
     base_url = "https://xysxl4d0mc.execute-api.sa-east-1.amazonaws.com/v1/vendas"
     intervals = generate_daily_intervals()
-    database_service = DatabaseService(url="your_supabase_url", key="your_supabase_key")  # Substitua com suas credenciais
+    database_service = DatabaseService(
+        url="your_supabase_url", key="your_supabase_key"
+    )  # Substitua com suas credenciais
 
     for start, end in intervals:
         max_retries = 3  # Número máximo de tentativas
@@ -38,20 +44,25 @@ def fetch_sales_data():
 
         while attempts < max_retries and not success:
             print(f"Requisição para: {base_url}?token={token}&data_venda={start},{end}")
-            response = requests.get(base_url, params={"token": token, "data_venda": f"{start},{end}"})
+            response = requests.get(
+                base_url, params={"token": token, "data_venda": f"{start},{end}"}
+            )
             attempts += 1
-            
+
             if response.status_code == 200:
                 # Tenta decodificar a resposta JSON
                 try:
                     data = response.json()
 
                     # Verifica se a mensagem indica que não há registros
-                    if "message" in data and data["message"] == "Nenhum registro encontrado!":
+                    if (
+                        "message" in data
+                        and data["message"] == "Nenhum registro encontrado!"
+                    ):
                         print(f"Nenhuma venda encontrada para o dia {start}.")
                         success = True  # Define sucesso para interromper o loop
                         break  # Interrompe as tentativas se não houver vendas
-                        
+
                     # Processa os dados
                     for venda in data:
                         if "Venda" in venda:
@@ -64,11 +75,13 @@ def fetch_sales_data():
                                 fone2=venda_details.get("fone2", ""),
                                 cpf_cnpj=venda_details.get("cpf_cnpj", ""),
                                 endereco=venda_details.get("endereco", ""),
-                                data_nascimento=venda_details.get("data_nascimento", ""),
+                                data_nascimento=venda_details.get(
+                                    "data_nascimento", ""
+                                ),
                                 cidade=venda_details.get("cidade", ""),
                                 uf=venda_details.get("uf", ""),
                                 bairro=venda_details.get("bairro", ""),
-                                cep=venda_details.get("cep", "")
+                                cep=venda_details.get("cep", ""),
                             )
 
                             # Inserir ou atualizar o cliente no banco de dados
@@ -83,13 +96,15 @@ def fetch_sales_data():
                                 hr_venda=venda_details["hr_venda"],
                                 situacao=venda_details["situacao"],
                                 sub_total=venda_details["sub_total"],
-                                vlr_desc_acresc_geral=venda_details["vlr_desc_acresc_geral"],
+                                vlr_desc_acresc_geral=venda_details[
+                                    "vlr_desc_acresc_geral"
+                                ],
                                 outros_valores=venda_details["outros_valores"],
                                 total_liquido=venda_details["total_liquido"],
                                 troca=venda_details["troca"],
-                                status=venda_details.get("status", "")
+                                status=venda_details.get("status", ""),
                             )
-                            
+
                             # Inserir ou atualizar a venda no banco de dados
                             database_service.inserir_venda(venda_obj)
 
@@ -101,7 +116,7 @@ def fetch_sales_data():
                                     descricao_produto=item["descricao_produto"],
                                     valor_unitario=item["valor_unitario"],
                                     qtdade=item["qtdade"],
-                                    id_venda=item["id_venda"]
+                                    id_venda=item["id_venda"],
                                 )
                                 # Inserir ou atualizar o item de venda
                                 database_service.inserir_item_venda(item_venda)
@@ -111,20 +126,26 @@ def fetch_sales_data():
                                 pagamento_obj = Pagamento(
                                     forma_pagto_ecf=pagamento["forma_pagto_ecf"],
                                     valor=pagamento["valor"],
-                                    id_venda=pagamento["id_venda"]
+                                    id_venda=pagamento["id_venda"],
                                 )
                                 # Inserir ou atualizar o pagamento
                                 database_service.inserir_pagamento(pagamento_obj)
-                    
+
                     success = True  # Define sucesso se os dados forem processados corretamente
                     break  # Interrompe o loop se a resposta for válida
                 except ValueError as e:
                     print(f"Erro ao decodificar JSON: {e}")
-                    print("Texto da resposta:", response.text)  # Imprime o texto da resposta para depuração
+                    print(
+                        "Texto da resposta:", response.text
+                    )  # Imprime o texto da resposta para depuração
             else:
-                print(f"Erro na requisição para o dia {start} (Tentativa {attempts}/{max_retries}): {response.status_code}")
+                print(
+                    f"Erro na requisição para o dia {start} (Tentativa {attempts}/{max_retries}): {response.status_code}"
+                )
                 print(f"Resposta da API: {response.text}")  # Verifica a resposta
                 time.sleep(2)  # Pausa entre as tentativas
 
         if not success:
-            print(f"Falha ao obter dados para o dia {start} após {max_retries} tentativas.")
+            print(
+                f"Falha ao obter dados para o dia {start} após {max_retries} tentativas."
+            )
